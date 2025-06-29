@@ -8,6 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <style>
         .lucide { width: 1em; height: 1em; display: inline-block; }
     </style>
@@ -70,6 +71,7 @@
         );
 
         const BookkeepingTool = () => {
+            const [user, setUser] = useState(null);
             const [transactions, setTransactions] = useState(() => {
                 const saved = localStorage.getItem('bookkeeping-transactions');
                 return saved ? JSON.parse(saved) : [];
@@ -90,6 +92,21 @@
                 income: ['Sales Revenue', 'Service Revenue', 'Interest Income', 'Other Income'],
                 expense: ['Office Supplies', 'Marketing', 'Utilities', 'Rent', 'Insurance', 'Professional Services', 'Travel', 'Equipment', 'Other Expenses']
             };
+
+            // Check for logged in user on load
+            useEffect(() => {
+                const currentUser = window.netlifyIdentity?.currentUser();
+                setUser(currentUser);
+                
+                window.netlifyIdentity?.on('login', (user) => {
+                    setUser(user);
+                    window.netlifyIdentity.close();
+                });
+                
+                window.netlifyIdentity?.on('logout', () => {
+                    setUser(null);
+                });
+            }, []);
 
             // Save to localStorage whenever transactions change
             useEffect(() => {
@@ -204,6 +221,41 @@
             const totals = calculateTotals();
             const categoryBreakdown = getCategoryBreakdown();
             const filteredTransactions = getFilteredTransactions();
+
+            // Show login screen if not authenticated
+            if (!user) {
+                return (
+                    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
+                            <div className="text-center">
+                                <h1 className="text-3xl font-bold text-gray-800 mb-2">SMB Cashflow Tracker</h1>
+                                <p className="text-gray-600 mb-6">Secure business bookkeeping tool</p>
+                                
+                                <div className="space-y-4">
+                                    <button
+                                        onClick={() => window.netlifyIdentity?.open('login')}
+                                        className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors font-medium"
+                                    >
+                                        Login
+                                    </button>
+                                    
+                                    <button
+                                        onClick={() => window.netlifyIdentity?.open('signup')}
+                                        className="w-full bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 transition-colors font-medium"
+                                    >
+                                        Sign Up
+                                    </button>
+                                </div>
+                                
+                                <div className="mt-6 text-sm text-gray-500">
+                                    <p>Your financial data is secure and private.</p>
+                                    <p>Only you can access your bookkeeping records.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
 
             return (
                 <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
